@@ -8,13 +8,16 @@ EAN_CODES_PATH = '/Users/70aeh/Gerali/Barcodes'
 EAN_SHEET = 'cereri_produse'
 ID_NAME_MAP = 'id_name_map.xlsx'
 
-SAVE_DIR = os.path.join(EAN_CODES_PATH, 'transport_10_2022')
+FD_SHIP_LIST = os.path.join(EAN_CODES_PATH, 'transport_11_2022_packing_list' + '.xlsx')
+SAVE_DIR = os.path.join(EAN_CODES_PATH, 'transport_11_2022')
 
 if not os.path.isdir(SAVE_DIR):
   os.mkdir(SAVE_DIR)
 
 ean_dir_path = os.path.join(EAN_CODES_PATH, 'ean_gs1')
 id_map_path = os.path.join(EAN_CODES_PATH, ID_NAME_MAP)
+
+fd_ship_list_data = pd.read_excel(FD_SHIP_LIST)
 
 size_mapper = SizeMapper(id_map_path)
 
@@ -40,30 +43,14 @@ ean_map_data = pd.read_excel(id_map_path).drop_duplicates()
 
 barcode_list = list()
 
-for item in gs1_df.iterrows():
+for item in fd_ship_list_data.iterrows():
   barcode_element = dict()
-  barcode_element['GTIN'] = item[1]['GTIN']
-  barcode_element['gerali_id'] = item[1]['gerali_id']
-  barcode_element['color'] = item[1]['color']
-  barcode_element['size_ro'] = item[1]['size']
-
-  querry_gerali_id = item[1]['gerali_id']
-
-  if querry_gerali_id not in list(ean_map_data['gerali_id']):
-    continue
-
-  ret_item = ean_map_data.loc[ean_map_data['gerali_id'] == querry_gerali_id]['name']
-  ret_size_map = ean_map_data.loc[ean_map_data['gerali_id'] == querry_gerali_id]['size_map'].item()
-  ret_size_map_old = ean_map_data.loc[ean_map_data['gerali_id'] == querry_gerali_id]['size_map_old'].item()
-  barcode_element['size_intl'] = size_mapper.ro_to_intl(item[1]['size'], ret_size_map)
-  # barcode_element['size_intl_old'] = size_mapper.ro_to_intl(item[1]['size'], ret_size_map_old)
-
-  barcode_element['name'] = ''
-  if not(ret_item.empty):
-    barcode_element['name'] = ret_item.item()
-  # Skip non-existent codes
-  else:
-    continue
+  barcode_element['GTIN'] = item[1]['EAN']
+  barcode_element['name'] = item[1]['Denumire Produs']
+  barcode_element['color'] = item[1]['Color code'].capitalize()
+  barcode_element['size_ro'] = str(item[1]['SizeRO'])
+  barcode_element['size_intl'] = str(item[1]['SizeFD'])
+  barcode_element['gerali_id'] = item[1]['Style'].lower()
 
   barcode_list.append(barcode_element)
 
