@@ -1,25 +1,23 @@
 import pandas as pd
 import os
 from gerali_barcode import generate_code
-from size_map import SizeMapper
 # import tqdm
 
-EAN_CODES_PATH = '/Users/70aeh/Gerali/Barcodes'
-EAN_SHEET = 'cereri_produse'
-ID_NAME_MAP = 'id_name_map.xlsx'
+INPUT_FILE_PREFIX_NAME = 'transport_2024_04'
 
-FD_SHIP_LIST = os.path.join(EAN_CODES_PATH, 'transport_11_2022_packing_list' + '.xlsx')
-SAVE_DIR = os.path.join(EAN_CODES_PATH, 'transport_11_2022')
+EAN_CODES_PATH = os.path.expanduser("~") + '/Gerali/Barcodes'
+EAN_SHEET = 'cereri_produse'
+# ID_NAME_MAP = 'id_name_map.xlsx'
+
+FD_SHIP_LIST = os.path.join(EAN_CODES_PATH, INPUT_FILE_PREFIX_NAME + '_packing_list' + '.xlsx')
+SAVE_DIR = os.path.join(EAN_CODES_PATH, 'barcodes_' + INPUT_FILE_PREFIX_NAME)
 
 if not os.path.isdir(SAVE_DIR):
   os.mkdir(SAVE_DIR)
 
 ean_dir_path = os.path.join(EAN_CODES_PATH, 'ean_gs1')
-id_map_path = os.path.join(EAN_CODES_PATH, ID_NAME_MAP)
 
 fd_ship_list_data = pd.read_excel(FD_SHIP_LIST)
-
-size_mapper = SizeMapper(id_map_path)
 
 gs1_df = pd.DataFrame()
 
@@ -39,8 +37,6 @@ for excel_file in os.listdir(ean_dir_path):
 
     gs1_df = gs1_df.append(excel_data)
 
-ean_map_data = pd.read_excel(id_map_path).drop_duplicates()
-
 barcode_list = list()
 
 for item in fd_ship_list_data.iterrows():
@@ -52,17 +48,24 @@ for item in fd_ship_list_data.iterrows():
   barcode_element['size_intl'] = str(item[1]['SizeFD'])
   barcode_element['gerali_id'] = item[1]['Style'].lower()
 
+  barcode_element['quantity'] = item[1]['Quantity']
+
   barcode_list.append(barcode_element)
 
   print(barcode_element)
 
   bar_text = barcode_element['name'] + ', ' + barcode_element['color'] + ', ' + barcode_element['size_ro']
   bar_text = bar_text.title()
+  bar_text = bar_text.replace('\'S', '\'s')
   bar_text += ' / ' + barcode_element['size_intl']
 
-  file_id = barcode_element['gerali_id'] + '-' + barcode_element['color'] + '-' + barcode_element['size_ro'] + '-' + barcode_element['size_intl'] + '.png'
-  save_file = os.path.join(SAVE_DIR, file_id)
-  generate_code(str(barcode_element['GTIN']), bar_text, save_file)
+  for i in range(barcode_element['quantity']):
+    suffix = '' if i == 0 else '_' + str(i)
+
+    file_id = barcode_element['gerali_id'] + '-' + barcode_element['color'] + '-' + barcode_element['size_ro'] + '-' + \
+              barcode_element['size_intl'] + suffix + '.png'
+    save_file = os.path.join(SAVE_DIR, file_id)
+    generate_code(str(barcode_element['GTIN']), bar_text, save_file)
 
   barcode_df = pd.DataFrame(barcode_list)
   barcode_df.to_excel('New_sizes.xlsx', index=False)
